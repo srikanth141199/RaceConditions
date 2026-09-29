@@ -1,15 +1,45 @@
 package main
 
-import "testing"
+import (
+	"io"
+	"os"
+	"strings"
+	"testing"
+)
 
-func Test_updateMessage(t *testing.T) {
-	msg = "Hello World!"
-	wg.Add(2)
-	go updateMessage("GoodBye 1!")
-	go updateMessage("GoodBye 2!")
-	wg.Wait()
+func Test_main(t *testing.T) {
+	stdOut := os.Stdout
 
-	if msg != "GoodBye 1!" {
-		t.Errorf("Expected msg to be 'GoodBye 1!', but got '%s'", msg)
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	os.Stdout = w
+
+	outputCh := make(chan string)
+
+	go func() {
+		result, err := io.ReadAll(r)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		outputCh <- string(result)
+	}()
+
+	main()
+
+	w.Close()
+	os.Stdout = stdOut
+
+	output := <-outputCh
+
+	if !strings.Contains(output, "$34320.00") {
+		t.Errorf(
+			"Expected output to contain 'Final bank balance: $34320.00', but got: %s",
+			output,
+		)
 	}
 }
